@@ -2,7 +2,7 @@
   "id": "./",
   "name": "PC Wake — パソコンを起こす",
   "short_name": "PC Wake",
-  "description": "PCの起動操作用Webアプリ。現在、起動経路は未接続です。",
+  "description": "毎時00分の確認で、PCの起動リクエストを受け付けるWebアプリ。",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",

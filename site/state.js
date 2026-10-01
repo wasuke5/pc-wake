@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  const validModes = new Set(['awake', 'asleep', 'unknown']);
+  const validModes = new Set(['awake', 'unknown']);
 
   function normalizeStatus(data, now = Date.now()) {
     const device = data && data.device && typeof data.device === 'object' ? data.device : {};
@@ -9,21 +9,26 @@
     let mode = validModes.has(device.mode) ? device.mode : 'unknown';
     if (mode === 'awake' && !heartbeatFresh) mode = 'unknown';
     const sourceRequest = data && data.request;
-    const request = sourceRequest && typeof sourceRequest === 'object' && ['queued', 'sent', 'pending', 'acknowledged', 'expired', 'failed'].includes(sourceRequest.status)
-      ? { id: String(sourceRequest.id || ''), status: sourceRequest.status, createdAt: sourceRequest.createdAt, acknowledgedAt: sourceRequest.acknowledgedAt }
+    const request = sourceRequest && typeof sourceRequest === 'object' && ['pending', 'acknowledged', 'expired', 'cancelled'].includes(sourceRequest.status)
+      ? { id: String(sourceRequest.id || ''), status: sourceRequest.status, createdAt: sourceRequest.createdAt, expiresAt: sourceRequest.expiresAt, acknowledgedAt: sourceRequest.acknowledgedAt }
       : null;
-    const relay = data && data.relay && typeof data.relay === 'object' ? data.relay : {};
-    const relayLastSeen = typeof relay.lastSeenAt === 'string' ? Date.parse(relay.lastSeenAt) : NaN;
-    const relayFresh = Number.isFinite(relayLastSeen) && relayLastSeen <= now + 30000 && now - relayLastSeen <= 60000;
-    return { name: typeof device.name === 'string' && device.name.trim() ? device.name.trim() : 'あなたのPC', mode, lastSeen, request, relay: { online: relay.online === true && relayFresh, lastSeenAt: relay.lastSeenAt || null } };
+    const schedule = data && data.schedule && typeof data.schedule === 'object' ? data.schedule : {};
+    const supported = schedule.mode === 'hourly' && schedule.minute === 0 && schedule.timeZone === 'Asia/Tokyo';
+    return {
+      name: typeof device.name === 'string' && device.name.trim() ? device.name.trim() : 'あなたのPC', mode, lastSeen, request,
+      schedule: { mode: 'hourly', minute: 0, timeZone: 'Asia/Tokyo', enabled: supported && schedule.enabled === true, nextCheckAt: schedule.nextCheckAt || null, agentLastCheckAt: schedule.agentLastCheckAt || null }
+    };
   }
 
   function viewState(status) {
-    if (status.mode === 'awake') return 'awake';
-    if (status.request && ['queued', 'sent', 'pending'].includes(status.request.status)) return 'pending';
-    if (status.request && status.request.status === 'failed') return 'failed';
+    if (status.request && status.request.status === 'pending') return 'pending';
+    if (status.request && status.request.status === 'acknowledged') {
+      const receivedAt = Date.parse(status.request.acknowledgedAt || status.request.createdAt);
+      return status.mode === 'awake' && Number.isFinite(receivedAt) && status.lastSeen >= receivedAt ? 'awake' : 'acknowledged';
+    }
     if (status.request && status.request.status === 'expired') return 'expired';
-    if (status.mode === 'asleep') return 'asleep';
+    if (status.request && status.request.status === 'cancelled') return 'cancelled';
+    if (status.mode === 'awake') return 'awake';
     return 'unknown';
   }
 

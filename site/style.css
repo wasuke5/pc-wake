@@ -55,6 +55,7 @@ h1 { margin: 11px 0 9px; font-size: 25px; font-weight: 700; letter-spacing: -.03
 .button-spinner { display: none; width: 19px; height: 19px; border: 2px solid #d4c3fb3d; border-top-color: #e3d7ff; border-radius: 50%; animation: spin 1s linear infinite; order: -1; }
 .wake-button.loading .button-spinner { display: inline-block; }
 .timing { color: var(--muted); font-size: 12px; margin: 12px 0 0; min-height: 18px; }
+.schedule-info { color: #c9bedf; font-size: 14px; margin: 9px 0 0; }
 .text-button { border: 0; background: transparent; color: #d5c6fc; padding: 11px 7px 0; font-size: 14px; font-weight: 600; }
 .text-button span { font-size: 15px; margin-left: 3px; }
 .last-seen { margin: 12px 0 0; color: #838da8; font-size: 12px; }

@@ -1,5 +1,5 @@
-// Fill apiBase with the HTTPS backend URL before publishing. No secret belongs here.
+// Public endpoint only. Pairing and PC credentials are stored outside this repository.
 window.WAKE_CONFIG = {
-  apiBase: '',
-  unavailableReason: '現在のWi-Fi環境では、スリープ中のPCへ起動信号を届ける設定ができていません。ネットワーク側の設定変更が必要です。'
+  apiBase: 'https://pc-wake-hourly.wasuke-neko.chatgpt.site',
+  unavailableReason: 'PC側の定期確認とサーバーの接続準備を進めています。'
 };

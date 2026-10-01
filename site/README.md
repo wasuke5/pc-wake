@@ -1,17 +1,36 @@
 # PC Wake のスマホ画面
 
-GitHub Pages のプロジェクトURLにそのまま置ける、ビルド不要のPWAです。`index.html` をページのルートに公開します。
+GitHub Pages のプロジェクトURLにそのまま置ける、ビルド不要のPWAです。`index.html` をページのルートに公開します。Windowsが日本時間の毎時00分に起き、サーバーへ要求を確認する方式です。ボタン操作から次の確認まで最大約1時間かかります。
 
-**現在の公開版にはAPIが接続されていないため、PCを起こす機能は動作しません。** `apiBase` は空です。起動経路が未接続である理由を表示し、起動ボタンとスマホ登録機能を無効にしています。ホーム画面への追加は任意です。
+`config.js` の `apiBase` にHTTPSバックエンドのURLを設定します。URLが空の間は、起動ボタンと登録機能を無効にします。公開ファイルに登録コードやPC用の認証情報を入れないでください。
 
-即時に起動信号を送る経路ができた後、`config.js` の `apiBase` にHTTPSバックエンドのURLを設定します。公開ファイルへ登録コードを入れないでください。初回は `https://<公開URL>/#key=<登録コード>` をスマホで開きます。コードはURLからすぐに除去し、このブラウザーのローカルストレージに保存します。
+初回は非公開の設定用リンク `https://<公開URL>/#key=<登録コード>` をスマホで開きます。コードはURLからすぐに除去し、このブラウザーのローカルストレージに保存します。
 
-Androidでは表示される「ホーム画面に追加」ボタン、iPhoneではSafariの共有 →「ホーム画面に追加」を使います。ホーム画面版で再登録を求められた場合は、設定用の登録コードを一度だけ貼り付けます。スマホのホーム画面への追加操作は端末側で必要です。
+Androidでは表示される「ホーム画面に追加」ボタン、iPhoneではSafariの共有 →「ホーム画面に追加」を使います。ホーム画面版で再登録を求められた場合は、設定用リンクか登録コードを一度だけ貼り付けます。ホーム画面への追加操作はスマホ側で必要です。
 
-API契約は `GET /api/status` と `POST /api/wake`（JSON `{}`）です。どちらも `Authorization: Bearer <登録コード>` を送ります。GETは `device: {name, mode, lastSeenAt}`、`relay: {online, lastSeenAt}`、`request: null | {id, status, createdAt, acknowledgedAt}` を返します。`request.status` は `queued`、`sent`、`pending`、`acknowledged`、`expired`、`failed` を受け付けます。
+API契約は `GET /api/status` と `POST /api/wake`（JSON `{}`）です。どちらも `Authorization: Bearer <登録コード>` を送ります。
 
-API接続後は状態を10秒ごとに取得します。これは画面の状態表示だけの更新で、定期的にPCを起こすタイマーではありません。起動ボタンは接続済みの起動用機器が確認できたときだけ有効になります。起動用機器は `relay.online === true` かつ60秒以内の応答が必要です。起動リクエストの受付や信号の送信だけでは起動成功と表示しません。`device.mode === awake` かつ90秒以内のPCの応答時刻を確認して、オンライン表示にします。通信が失敗した場合は起動確認も成功扱いにしません。
+GETの応答:
 
-サービスワーカーは画面と画像だけをキャッシュします。API、登録コード、設定ファイルはキャッシュしません。オフラインでは起動ボタンを無効にします。更新時は `sw.js` のCACHE名を変更すると、新しいバージョンの更新通知が表示されます。
+```json
+{
+  "schedule": {
+    "mode": "hourly",
+    "minute": 0,
+    "timeZone": "Asia/Tokyo",
+    "enabled": true,
+    "nextCheckAt": "2026-10-02T01:00:00+09:00",
+    "agentLastCheckAt": null
+  },
+  "device": { "name": "あなたのPC", "mode": "unknown", "lastSeenAt": null },
+  "request": null
+}
+```
 
-PCへすぐに起動信号を送る経路が必要です。この画面自体はスリープ中のPCに直接信号を送れません。起動経路がなければ「起動経路が未接続」と表示し、ボタンを無効にします。
+`request` は `null` または `{id, status, createdAt, expiresAt, acknowledgedAt}` です。`status` は `pending`、`acknowledged`、`expired`、`cancelled` を受け付けます。POSTは `{request, estimatedWaitSeconds, nextCheckAt}` を返します。
+
+API接続後は、画面が開いている間、状態を10秒ごとに取得します。PCが応答していなくても、認証と定期確認の有効設定が確認できれば起動を要求できます。要求の受付だけでは成功と表示しません。未受信の要求がある間は、以前のPCの応答が新しくても「受付済み」の表示を保ちます。`acknowledged` で「PCが要求を受信」と表示し、それ以降の90秒以内のPCの応答を確認して「オンライン」にします。
+
+確認時刻はスマホの地域設定によらず日本時間で表示します。タイマー設定、実際のスリープ解除と要求確認はWindows側のエージェントが行います。
+
+サービスワーカーは画面と画像だけをキャッシュします。API、登録コード、設定ファイルはキャッシュしません。オフラインでは起動ボタンを無効にします。画面更新時は `sw.js` のCACHE名を変更すると、新しいバージョンの更新通知が表示されます。
