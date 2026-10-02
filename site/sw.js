@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'pc-wake-shell-v3-hourly';
+const CACHE = 'pc-wake-shell-v4-remote-start';
 const ROOT = new URL('./', self.location.href);
 const SHELL_PATHS = ['./', './index.html', './style.css', './state.js', './app.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable.png', './icons/apple-touch-icon.png'];
 const SHELL_URLS = SHELL_PATHS.map(path => new URL(path, ROOT).href);

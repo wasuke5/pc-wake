@@ -13,8 +13,8 @@
   let connectionMessage = '';
   let installPrompt = null;
   let swRegistration = null;
-  let waitingWorker = null;
   let pollTimer = null;
+  let waitingWorker = null;
   const tokyoDateTime = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const tokyoTime = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
@@ -48,9 +48,21 @@
     $('pairButton').hidden = !endpointReady || !!key;
     $('changePairButton').hidden = !endpointReady || !key;
     $('refreshButton').disabled = !key || !endpointReady || refreshing || !online;
-    $('wakeButton').classList.toggle('loading', busy || state === 'pending' && scheduleReady);
+    $('wakeButton').classList.toggle('loading', busy);
+    $('wakeButton').classList.toggle('is-pending', state === 'pending' && scheduleReady);
     $('wakeButton').disabled = !key || !endpointReady || !scheduleReady || busy || state === 'pending' || state === 'awake';
-    $('wakeButtonLabel').textContent = busy ? '送信中…' : state === 'pending' && scheduleReady ? '次の確認を待っています' : state === 'awake' && ready ? 'PCはオンラインです' : 'PCを起こす';
+    let buttonLabel = '次の毎時00分に起動を予約';
+    if (busy) buttonLabel = '起動要求を送信中…';
+    else if (!online) buttonLabel = 'インターネット接続を確認';
+    else if (!endpointReady) buttonLabel = '接続の準備中';
+    else if (!key) buttonLabel = '先にこのスマホを登録';
+    else if (connection === 'unauthorized') buttonLabel = '登録を確認してください';
+    else if (connection === 'error') buttonLabel = '接続を確認してください';
+    else if (refreshing || connection === 'checking') buttonLabel = 'PCの状態を確認中…';
+    else if (state === 'pending') buttonLabel = scheduleReady ? '起動要求を送信済み' : 'PCの定期確認が無効です';
+    else if (state === 'awake' && ready) buttonLabel = 'PCはオンラインです';
+    else if (!scheduleReady) buttonLabel = 'PCの定期確認を確認してください';
+    $('wakeButtonLabel').textContent = buttonLabel;
     $('connectionDot').dataset.state = scheduleReady ? 'ready' : 'idle';
     let pill = '状態を確認中';
     let message = 'PCの状態を確認しています。';
@@ -61,24 +73,32 @@
     else if (connection === 'unauthorized') { pill = '登録を確認してください'; message = '登録コードを確認し、もう一度登録してください。'; }
     else if (connection === 'error') { pill = '接続できません'; message = connectionMessage || '接続を確認して、もう一度試してください。'; }
     else if (connection === 'ready') {
-      if (state === 'pending') { pill = '起動リクエスト受付済み'; message = scheduleReady ? 'まだPCの受信は未確認です。次の毎時00分の確認をお待ちください。' : '受付済みですが、PC側の定期確認が無効です。'; tone = 'pending'; }
+      if (state === 'pending') { pill = '00分の起動予約済み'; message = scheduleReady ? '起動要求を保存しました。PCはまだ受信していません。次の毎時00分に復帰して要求を確認します。' : '受付済みですが、PC側の定期確認が無効です。'; tone = 'pending'; }
       else if (state === 'awake') { pill = 'オンライン'; message = current.request && current.request.status === 'acknowledged' ? 'PCが要求を受信し、現在の応答も確認できました。' : 'PCからの新しい応答を確認しました。'; tone = 'awake'; }
       else if (state === 'acknowledged') { pill = 'PCが要求を受信'; message = 'PCがこの要求を受信しました。現在の接続状態は未確認です。'; }
       else if (!scheduleReady) { pill = '定期確認が無効です'; message = 'PC側の毎時00分の確認設定を確認してください。'; }
       else if (state === 'expired') { pill = '要求の有効期限切れ'; message = '有効期限内にPCの受信を確認できませんでした。もう一度要求できます。'; }
       else if (state === 'cancelled') { pill = '要求を取り消しました'; message = '新しく起動をリクエストできます。'; }
-      else { pill = 'リクエストできます'; message = 'PCの現在の状態は未確認です。ボタンを押すと、次の確認時に起動を要求します。'; }
+      else { pill = '起動予約できます'; message = '下のボタンを押すと要求を保存します。PCは次の毎時00分にスリープから復帰して、この要求を確認します。'; }
     }
     $('statusText').textContent = pill;
     $('statusPill').dataset.state = tone;
     document.querySelector('.computer-visual').dataset.state = tone;
+    document.querySelector('.wake-card').dataset.state = tone;
+    const flowStage = !scheduleReady ? -1 : state === 'pending' ? 1 : state === 'awake' || state === 'acknowledged' ? 2 : 0;
+    document.querySelectorAll('[data-flow-step]').forEach((step, index) => {
+      step.classList.toggle('is-active', index === flowStage);
+      step.classList.toggle('is-complete', index < flowStage);
+      if (index === flowStage) step.setAttribute('aria-current', 'step');
+      else step.removeAttribute('aria-current');
+    });
     $('mainMessage').textContent = message;
-    $('timingText').textContent = !endpointReady ? '接続の準備が完了すると使えます。' : !key ? '設定用リンクから、初回登録をしてください。' : '毎時00分に確認 · 最大約1時間';
+    $('timingText').textContent = !endpointReady ? '接続の準備が完了すると使えます。' : !key ? '設定用リンクから、初回登録をしてください。' : '毎時00分にPCが復帰 · 最長約1時間待ち';
     const nextCheck = current ? Date.parse(current.schedule.nextCheckAt) : NaN;
     $('scheduleInfo').hidden = !key || !endpointReady;
-    $('scheduleInfo').textContent = Number.isFinite(nextCheck) ? '次の確認 ' + tokyoTime.format(new Date(nextCheck)) + '（日本時間）' : '次の確認時刻を確認中';
-    $('nextHeading').textContent = '毎時00分にリクエストを確認';
-    $('nextMessage').textContent = '毎時00分に要求を確認します。自動復帰時に要求がなければ、Windowsの設定に従って再びスリープします。';
+    $('scheduleInfo').textContent = Number.isFinite(nextCheck) ? '次回のPC復帰 ' + tokyoTime.format(new Date(nextCheck)) + '（日本時間）' : '次回のPC復帰時刻を確認中';
+    $('nextHeading').textContent = '起動予約はシアン色のボタンから';
+    $('nextMessage').textContent = 'タップすると起動要求を保存。PCは毎時00分に復帰して受信します。要求がなければ、Windowsの設定に従って再びスリープします。';
     $('lastSeen').hidden = !status || !Number.isFinite(status.lastSeen);
     if (!$('lastSeen').hidden) {
       $('lastSeen').textContent = 'PCの最終応答 ' + tokyoDateTime.format(new Date(status.lastSeen)) + '（日本時間）';
@@ -171,14 +191,18 @@
     window.addEventListener('load', async () => {
       try {
         swRegistration = await navigator.serviceWorker.register('./sw.js');
-        function offerUpdate() {
-          if (swRegistration.waiting && navigator.serviceWorker.controller) { waitingWorker = swRegistration.waiting; $('updateBanner').hidden = false; }
+        function applyAvailableUpdate() {
+          if (swRegistration.waiting && navigator.serviceWorker.controller) {
+            waitingWorker = swRegistration.waiting;
+            waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
         }
-        offerUpdate();
+        applyAvailableUpdate();
         swRegistration.addEventListener('updatefound', () => {
           const installing = swRegistration.installing;
-          if (installing) installing.addEventListener('statechange', () => { if (installing.state === 'installed') offerUpdate(); });
+          if (installing) installing.addEventListener('statechange', () => { if (installing.state === 'installed') applyAvailableUpdate(); });
         });
+        if (navigator.onLine) await swRegistration.update();
       } catch (_) { /* Wake remains available even without offline installation support. */ }
     });
     $('updateButton').addEventListener('click', () => { if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' }); });

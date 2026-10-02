@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101524">
+  <meta name="theme-color" content="#070d19">
   <meta name="description" content="毎時00分の確認で、PCの起動リクエストを受け付けるWebアプリ。">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PC Wake">
-  <title>PC Wake — パソコンを起こす</title>
+  <title>PC Wake — REMOTE START</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -23,20 +23,24 @@
   <main class="app">
     <header class="brand">
       <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg></div>
-      <div><span class="brand-name">PC Wake</span><p class="brand-caption">スマホから、自分のパソコンへ。</p></div>
+      <div><span class="brand-name">PC WAKE <span class="brand-version">REMOTE START</span></span><p class="brand-caption">SECURE LINK <span aria-hidden="true">/</span> TOKYO TIME</p></div>
       <span class="connection-dot" id="connectionDot" aria-hidden="true"></span>
     </header>
 
     <div class="offline-banner" id="offlineBanner" role="alert" hidden>オフラインです。現在の接続状態を確認できません。</div>
-    <div class="update-banner" id="updateBanner" hidden><span>新しいバージョンがあります。</span><button type="button" id="updateButton">更新</button></div>
-
+    <div class="update-banner" id="updateBanner" hidden><span>新しいバージョンを適用しています。</span><button type="button" id="updateButton">更新</button></div>
     <section class="wake-card" aria-labelledby="deviceName">
-      <div class="card-top"><span class="eyebrow">MY COMPUTER</span><button type="button" id="refreshButton" class="icon-button" aria-label="PCの状態を更新" title="状態を更新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M19.4 12a7.5 7.5 0 1 1-2.1-5.3L20 9"/></svg></button></div>
+      <div class="card-top"><span class="eyebrow"><span class="eyebrow-light" aria-hidden="true"></span>REMOTE WAKE SEQUENCE</span><button type="button" id="refreshButton" class="icon-button" aria-label="PCの状態を更新" title="状態を更新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M19.4 12a7.5 7.5 0 1 1-2.1-5.3L20 9"/></svg></button></div>
       <h1 id="deviceName">あなたのPC</h1>
       <div class="status-pill" id="statusPill"><span class="status-dot" aria-hidden="true"></span><span id="statusText">接続を確認中</span></div>
-      <div class="computer-visual" aria-hidden="true"><div class="computer-screen"><div class="screen-glow"></div><svg viewBox="0 0 48 48"><path d="M24 10v16M13.3 16.5a15 15 0 1 0 21.4 0"/></svg><span class="screen-dot"></span></div><div class="computer-neck"></div><div class="computer-base"></div></div>
+      <div class="computer-visual" aria-hidden="true"><div class="computer-screen"><div class="screen-glow"></div><span class="screen-scan"></span><svg viewBox="0 0 48 48"><path d="M24 10v16M13.3 16.5a15 15 0 1 0 21.4 0"/></svg><span class="screen-dot"></span></div><div class="computer-neck"></div><div class="computer-base"></div><span class="orbit-node"></span></div>
       <p class="main-message" id="mainMessage" aria-live="polite" aria-atomic="true">PC側の定期確認とサーバーの接続状態を確認しています。</p>
-      <button type="button" class="wake-button" id="wakeButton" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg><span id="wakeButtonLabel">PCを起こす</span><span class="button-spinner" aria-hidden="true"></span></button>
+      <ol class="wake-flow" aria-label="起動要求の流れ">
+        <li class="flow-step" data-flow-step="0"><span class="flow-number">01</span><span>ここを押す</span></li>
+        <li class="flow-step" data-flow-step="1"><span class="flow-number">02</span><span>要求を保存</span></li>
+        <li class="flow-step" data-flow-step="2"><span class="flow-number">03</span><span>PCが00分に復帰</span></li>
+      </ol>
+      <button type="button" class="wake-button" id="wakeButton" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg><span id="wakeButtonLabel">毎時00分に起動を予約</span><span class="button-spinner" aria-hidden="true"></span><span class="button-arrow" aria-hidden="true">↗</span></button>
       <p class="timing" id="timingText">毎時00分に確認 · 最大約1時間</p>
       <p class="schedule-info" id="scheduleInfo" hidden></p>
       <button type="button" class="text-button" id="pairButton" hidden>このスマホを登録する <span aria-hidden="true">↗</span></button>
@@ -45,7 +49,7 @@
 
     <section class="next-card" aria-labelledby="nextHeading">
       <div class="small-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8 10l2 2 5-5"/></svg></div>
-      <div><h2 id="nextHeading">毎時00分にリクエストを確認</h2><p id="nextMessage">毎時00分に要求を確認します。自動復帰時に要求がなければ、Windowsの設定に従って再びスリープします。</p></div>
+      <div><h2 id="nextHeading">このボタンで起動を予約</h2><p id="nextMessage">タップすると要求を保存します。PCは次の毎時00分にスリープから復帰して受信します。要求がなければ、Windowsの設定に従って再びスリープします。</p></div>
     </section>
 
     <section class="install-card" id="installCard" aria-labelledby="installHeading">
