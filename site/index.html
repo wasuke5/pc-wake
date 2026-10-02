@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#070d19">
-  <meta name="description" content="毎時00分の確認で、PCの起動リクエストを受け付けるWebアプリ。">
+  <meta name="theme-color" content="#02040c">
+  <meta name="description" content="宇宙のAIコアから、毎時00分のPC起動を予約。">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="PC Wake">
-  <title>PC Wake — REMOTE START</title>
+  <title>PC Wake — ORBITAL INTERFACE</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -16,62 +16,65 @@
   <script defer src="./config.js"></script>
   <script defer src="./state.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="./cosmos.js"></script>
 </head>
 <body>
-  <div class="glow glow-one" aria-hidden="true"></div>
-  <div class="glow glow-two" aria-hidden="true"></div>
+  <div class="universe" aria-hidden="true">
+    <div class="nebula nebula-blue"></div><div class="nebula nebula-violet"></div>
+    <canvas id="starfield"></canvas>
+    <div class="planet"><div class="planet-atmosphere"></div></div>
+    <div class="universe-vignette"></div>
+  </div>
   <main class="app">
     <header class="brand">
-      <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg></div>
-      <div><span class="brand-name">PC WAKE <span class="brand-version">REMOTE START</span></span><p class="brand-caption">SECURE LINK <span aria-hidden="true">/</span> TOKYO TIME</p></div>
-      <span class="connection-dot" id="connectionDot" aria-hidden="true"></span>
+      <a class="brand-mark" href="./" aria-label="PC Wake ホーム"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 12 7v14l-12 7-12-7V9Z"/><path d="M16 8v8m-5-4a7 7 0 1 0 10 0"/></svg><span>PC<span class="brand-light">WAKE</span><small>ORBITAL INTERFACE</small></span></a>
+      <div class="header-tools"><span class="link-indicator"><span class="connection-dot" id="connectionDot" aria-hidden="true"></span>LINK</span><button type="button" id="systemButton" class="icon-button system-button" aria-label="SYSTEM — 設定と使い方" aria-controls="systemDialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/></svg></button></div>
     </header>
 
-    <div class="offline-banner" id="offlineBanner" role="alert" hidden>オフラインです。現在の接続状態を確認できません。</div>
-    <div class="update-banner" id="updateBanner" hidden><span>新しいバージョンを適用しています。</span><button type="button" id="updateButton">更新</button></div>
-    <section class="wake-card" aria-labelledby="deviceName">
-      <div class="card-top"><span class="eyebrow"><span class="eyebrow-light" aria-hidden="true"></span>REMOTE WAKE SEQUENCE</span><button type="button" id="refreshButton" class="icon-button" aria-label="PCの状態を更新" title="状態を更新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M19.4 12a7.5 7.5 0 1 1-2.1-5.3L20 9"/></svg></button></div>
-      <h1 id="deviceName">あなたのPC</h1>
-      <div class="status-pill" id="statusPill"><span class="status-dot" aria-hidden="true"></span><span id="statusText">接続を確認中</span></div>
-      <div class="computer-visual" aria-hidden="true"><div class="computer-screen"><div class="screen-glow"></div><span class="screen-scan"></span><svg viewBox="0 0 48 48"><path d="M24 10v16M13.3 16.5a15 15 0 1 0 21.4 0"/></svg><span class="screen-dot"></span></div><div class="computer-neck"></div><div class="computer-base"></div><span class="orbit-node"></span></div>
-      <p class="main-message" id="mainMessage" aria-live="polite" aria-atomic="true">PC側の定期確認とサーバーの接続状態を確認しています。</p>
-      <ol class="wake-flow" aria-label="起動要求の流れ">
-        <li class="flow-step" data-flow-step="0"><span class="flow-number">01</span><span>ここを押す</span></li>
-        <li class="flow-step" data-flow-step="1"><span class="flow-number">02</span><span>要求を保存</span></li>
-        <li class="flow-step" data-flow-step="2"><span class="flow-number">03</span><span>PCが00分に復帰</span></li>
-      </ol>
-      <button type="button" class="wake-button" id="wakeButton" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg><span id="wakeButtonLabel">毎時00分に起動を予約</span><span class="button-spinner" aria-hidden="true"></span><span class="button-arrow" aria-hidden="true">↗</span></button>
-      <p class="timing" id="timingText">毎時00分に確認 · 最大約1時間</p>
-      <p class="schedule-info" id="scheduleInfo" hidden></p>
-      <button type="button" class="text-button" id="pairButton" hidden>このスマホを登録する <span aria-hidden="true">↗</span></button>
-      <p class="last-seen" id="lastSeen" hidden></p>
-    </section>
+    <div class="offline-banner" id="offlineBanner" role="alert" hidden>オフライン · 接続を確認してください</div>
+    <div class="update-banner" id="updateBanner" hidden><span>更新を適用しています</span><button type="button" id="updateButton">更新</button></div>
 
-    <section class="next-card" aria-labelledby="nextHeading">
-      <div class="small-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8 10l2 2 5-5"/></svg></div>
-      <div><h2 id="nextHeading">このボタンで起動を予約</h2><p id="nextMessage">タップすると要求を保存します。PCは次の毎時00分にスリープから復帰して受信します。要求がなければ、Windowsの設定に従って再びスリープします。</p></div>
-    </section>
+    <section class="wake-card" aria-labelledby="heroTitle" data-state="neutral">
+      <div class="hero-heading"><p class="eyebrow"><span class="tiny-cross" aria-hidden="true">+</span> AI CORE / REMOTE WAKE</p><h1 id="heroTitle">AWAKEN<span class="title-period">.</span></h1><div class="device-line"><span class="device-prefix">TARGET</span><span id="deviceName">あなたのPC</span><button type="button" id="refreshButton" class="icon-button refresh-button" aria-label="PCの状態を更新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M19.4 12a7.5 7.5 0 1 1-2.1-5.3L20 9"/></svg></button></div></div>
 
-    <section class="install-card" id="installCard" aria-labelledby="installHeading">
-      <div class="install-top"><h2 id="installHeading">ホーム画面に置く</h2><span class="mini-app" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg></span></div>
-      <p id="installHint">ブラウザーのメニューから「ホーム画面に追加」または「アプリをインストール」を選べます。</p>
-      <button type="button" id="installButton" class="secondary-button" hidden>ホーム画面に追加</button>
+      <div class="core-stage">
+        <div class="side-readout readout-left" aria-hidden="true"><span>01 / CORE</span><i></i><strong>NEURAL<br>INTERFACE</strong><div class="waveform"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div></div>
+        <div class="computer-visual" data-state="neutral" aria-hidden="true">
+          <div class="core-aura"></div><div class="core-axis axis-vertical"></div><div class="core-axis axis-horizontal"></div>
+          <svg class="core-hud" viewBox="0 0 420 420"><circle class="hud-ticks" cx="210" cy="210" r="190"/><circle class="hud-inner" cx="210" cy="210" r="177"/><g class="hud-orbit"><path d="M210 20a190 190 0 0 1 164.5 95M210 400a190 190 0 0 1-164.5-95"/><circle cx="374.5" cy="115" r="3"/><circle cx="45.5" cy="305" r="3"/></g><path class="hud-brackets" d="M45 87V62h25m280 0h25v25M45 333v25h25m280 0h25v-25"/></svg>
+          <div class="orb-shell"><div class="orb-surface"></div><div class="orb-latitude"></div><div class="orb-shine"></div></div>
+          <canvas id="coreCanvas"></canvas>
+          <div class="core-heart"><svg viewBox="0 0 48 48"><path d="M24 10v15M14 16a15 15 0 1 0 20 0"/></svg></div>
+          <span class="core-coordinate coordinate-one">N / 00</span><span class="core-coordinate coordinate-two">ORBITAL NODE</span>
+          <div class="transmission-ring"></div><div class="transmission-ring ring-two"></div>
+        </div>
+        <div class="side-readout readout-right" aria-hidden="true"><span>02 / RELAY</span><i></i><strong>WAKE<br>PROTOCOL</strong><div class="signal-lines"><b></b><b></b><b></b><b></b></div></div>
+      </div>
+
+      <div class="command-panel">
+        <div class="status-pill" id="statusPill"><span class="status-dot" aria-hidden="true"></span><span id="statusText">接続を確認中</span></div>
+        <button type="button" class="wake-button" id="wakeButton" disabled><span class="button-corner corner-one" aria-hidden="true"></span><span class="button-corner corner-two" aria-hidden="true"></span><span class="button-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8M6.6 6.8a8 8 0 1 0 10.8 0"/></svg><span class="button-spinner" aria-hidden="true"></span></span><span class="button-copy"><span class="button-kicker" id="commandLabel">INITIATE WAKE</span><span id="wakeButtonLabel">次の00分に起動を予約</span></span><svg class="button-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 17 10-10M7 7h10v10"/></svg></button>
+        <button type="button" class="text-button" id="pairButton" hidden>このスマホを登録 <span aria-hidden="true">↗</span></button>
+        <div class="sync-readout"><div><span class="readout-label">NEXT SYNC <span>/ JST</span></span><strong id="syncTime">—<span>:00</span></strong></div><div class="sync-divider"></div><div class="sync-frequency"><span class="readout-label">CYCLE</span><strong>HOURLY<span>毎時00分</span></strong></div></div>
+        <p class="main-message" id="mainMessage" aria-live="polite" aria-atomic="true">接続を確認しています。</p>
+        <p class="timing" id="timingText">最大約1時間待ち</p>
+      </div>
+      <div class="horizon-label" aria-hidden="true"><span></span>BEYOND THE DISTANCE<span></span></div>
     </section>
-    <footer><span>PC Wake</span><button type="button" class="footer-button" id="changePairButton" hidden>スマホの登録を変更</button></footer>
-    <noscript><p class="no-script">このアプリにはJavaScriptが必要です。ブラウザーの設定で有効にしてください。</p></noscript>
+    <footer><span>REMOTE SYSTEM <i>/</i> 01</span><button type="button" id="systemTextButton" class="footer-button" aria-controls="systemDialog">SYSTEM <span aria-hidden="true">+</span></button></footer>
+    <noscript><p class="no-script">このアプリにはJavaScriptが必要です。</p></noscript>
   </main>
 
+  <dialog id="systemDialog" aria-labelledby="systemHeading">
+    <div class="dialog-top"><span class="eyebrow">ORBITAL / SYSTEM</span><button type="button" id="closeSystemButton" class="icon-button" aria-label="閉じる">×</button></div>
+    <h2 id="systemHeading">システム</h2>
+    <section class="next-card" aria-labelledby="nextHeading"><h3 id="nextHeading">起動のしくみ</h3><p id="nextMessage">起動要求を保存すると、PCが次の毎時00分に受信します。</p><p class="schedule-info" id="scheduleInfo" hidden></p><p class="last-seen" id="lastSeen" hidden></p></section>
+    <section class="install-card" id="installCard" aria-labelledby="installHeading"><h3 id="installHeading">ホーム画面に追加</h3><p id="installHint">ブラウザーのメニューから「ホーム画面に追加」または「アプリをインストール」を選べます。</p><button type="button" id="installButton" class="secondary-button" hidden>ホーム画面に追加</button></section>
+    <button type="button" class="secondary-button" id="changePairButton" hidden>スマホの登録を変更</button>
+    <p class="system-version">PC WAKE / ORBITAL v6</p>
+  </dialog>
   <dialog id="pairDialog" aria-labelledby="pairHeading">
-    <form id="pairForm">
-      <div class="dialog-top"><span class="eyebrow">ONE-TIME SETUP</span><button type="button" id="closePairButton" class="icon-button" aria-label="閉じる">×</button></div>
-      <h2 id="pairHeading">このスマホを登録</h2>
-      <p>設定用リンクをこのスマホで開くと、自動で登録されます。ホーム画面版で登録が必要になった場合は、リンクか登録コードを貼り付けてください。</p>
-      <label for="pairKey">設定用リンク または 登録コード</label>
-      <input id="pairKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="リンクか登録コードを貼り付け" required>
-      <p id="pairError" class="form-error" role="alert" hidden></p>
-      <button type="submit" class="secondary-button">登録する</button>
-      <p class="dialog-note">このスマホのブラウザーに保存します。設定用リンクや登録コードは、ほかの人に共有しないでください。</p>
-    </form>
+    <form id="pairForm"><div class="dialog-top"><span class="eyebrow">PAIRING / SETUP</span><button type="button" id="closePairButton" class="icon-button" aria-label="閉じる">×</button></div><h2 id="pairHeading">このスマホを登録</h2><p>設定用リンクか登録コードを貼り付けてください。</p><label for="pairKey">設定用リンク または 登録コード</label><input id="pairKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="リンクか登録コードを貼り付け" required><p id="pairError" class="form-error" role="alert" hidden></p><button type="submit" class="secondary-button">登録する</button><p class="dialog-note">登録情報はこのブラウザーに保存されます。設定用リンクはほかの人に共有しないでください。</p></form>
   </dialog>
 </body>
 </html>

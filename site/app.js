@@ -51,40 +51,53 @@
     $('wakeButton').classList.toggle('loading', busy);
     $('wakeButton').classList.toggle('is-pending', state === 'pending' && scheduleReady);
     $('wakeButton').disabled = !key || !endpointReady || !scheduleReady || busy || state === 'pending' || state === 'awake';
-    let buttonLabel = '次の毎時00分に起動を予約';
-    if (busy) buttonLabel = '起動要求を送信中…';
-    else if (!online) buttonLabel = 'インターネット接続を確認';
+    let buttonLabel = '次の00分に起動を予約';
+    if (busy) buttonLabel = '起動要求を送信中';
+    else if (!online) buttonLabel = '接続を確認してください';
     else if (!endpointReady) buttonLabel = '接続の準備中';
-    else if (!key) buttonLabel = '先にこのスマホを登録';
+    else if (!key) buttonLabel = 'スマホの登録が必要です';
     else if (connection === 'unauthorized') buttonLabel = '登録を確認してください';
     else if (connection === 'error') buttonLabel = '接続を確認してください';
-    else if (refreshing || connection === 'checking') buttonLabel = 'PCの状態を確認中…';
-    else if (state === 'pending') buttonLabel = scheduleReady ? '起動要求を送信済み' : 'PCの定期確認が無効です';
-    else if (state === 'awake' && ready) buttonLabel = 'PCはオンラインです';
-    else if (!scheduleReady) buttonLabel = 'PCの定期確認を確認してください';
+    else if (connection === 'checking') buttonLabel = 'PCの状態を確認中';
+    else if (state === 'pending') buttonLabel = scheduleReady ? '次の00分の受信待ち' : '定期確認が無効です';
+    else if (state === 'awake' && ready) buttonLabel = 'PCからの応答を確認';
+    else if (!scheduleReady) buttonLabel = '定期確認の設定が必要です';
     $('wakeButtonLabel').textContent = buttonLabel;
+    $('wakeButton').setAttribute('aria-busy', String(busy));
+    let command = 'INITIATE WAKE';
+    if (busy) command = 'TRANSMITTING';
+    else if (!online || connection === 'error') command = 'LINK UNAVAILABLE';
+    else if (!endpointReady) command = 'SYSTEM SETUP';
+    else if (!key || connection === 'unauthorized') command = 'PAIRING REQUIRED';
+    else if (connection === 'checking') command = 'SYNCHRONIZING';
+    else if (state === 'pending' && ready) command = 'SIGNAL QUEUED';
+    else if (state === 'awake' && ready) command = 'SYSTEM ONLINE';
+    else if (!scheduleReady) command = 'SCHEDULE OFFLINE';
+    if ($('commandLabel')) $('commandLabel').textContent = command;
     $('connectionDot').dataset.state = scheduleReady ? 'ready' : 'idle';
     let pill = '状態を確認中';
-    let message = 'PCの状態を確認しています。';
+    let message = '接続を確認しています。';
     let tone = 'neutral';
     if (!online) { pill = 'オフライン'; message = '現在の接続状態を確認できません。'; }
     else if (!endpointReady) { pill = '接続を準備中'; message = unavailableReason; }
-    else if (!key) { pill = 'このスマホを登録'; message = '最初に、このスマホをPCとつなぎます。'; }
+    else if (!key) { pill = '未登録'; message = '設定用リンクから、このスマホを登録。'; }
     else if (connection === 'unauthorized') { pill = '登録を確認してください'; message = '登録コードを確認し、もう一度登録してください。'; }
     else if (connection === 'error') { pill = '接続できません'; message = connectionMessage || '接続を確認して、もう一度試してください。'; }
     else if (connection === 'ready') {
-      if (state === 'pending') { pill = '00分の起動予約済み'; message = scheduleReady ? '起動要求を保存しました。PCはまだ受信していません。次の毎時00分に復帰して要求を確認します。' : '受付済みですが、PC側の定期確認が無効です。'; tone = 'pending'; }
-      else if (state === 'awake') { pill = 'オンライン'; message = current.request && current.request.status === 'acknowledged' ? 'PCが要求を受信し、現在の応答も確認できました。' : 'PCからの新しい応答を確認しました。'; tone = 'awake'; }
-      else if (state === 'acknowledged') { pill = 'PCが要求を受信'; message = 'PCがこの要求を受信しました。現在の接続状態は未確認です。'; }
+      if (state === 'pending') { pill = '起動要求を保存済み'; message = scheduleReady ? '次の00分にPCが受信します。' : '受付済み · PC側の定期確認が無効です。'; tone = 'pending'; }
+      else if (state === 'awake') { pill = 'PCオンライン'; message = current.request && current.request.status === 'acknowledged' ? '起動要求を受信 · PCの応答を確認。' : 'PCからの応答を確認。'; tone = 'awake'; }
+      else if (state === 'acknowledged') { pill = 'PCが要求を受信'; message = '受信済み · 現在のPC状態は未確認。'; }
       else if (!scheduleReady) { pill = '定期確認が無効です'; message = 'PC側の毎時00分の確認設定を確認してください。'; }
-      else if (state === 'expired') { pill = '要求の有効期限切れ'; message = '有効期限内にPCの受信を確認できませんでした。もう一度要求できます。'; }
-      else if (state === 'cancelled') { pill = '要求を取り消しました'; message = '新しく起動をリクエストできます。'; }
-      else { pill = '起動予約できます'; message = '下のボタンを押すと要求を保存します。PCは次の毎時00分にスリープから復帰して、この要求を確認します。'; }
+      else if (state === 'expired') { pill = '要求の期限切れ'; message = '受信未確認 · もう一度予約できます。'; }
+      else if (state === 'cancelled') { pill = '要求を取り消し済み'; message = '新しい起動要求を送信できます。'; }
+      else { pill = '起動予約できます'; message = '起動要求は、次の00分にPCへ。'; }
     }
+    if (busy) { pill = '起動要求を送信中'; message = '要求を保存しています。'; }
     $('statusText').textContent = pill;
     $('statusPill').dataset.state = tone;
     document.querySelector('.computer-visual').dataset.state = tone;
     document.querySelector('.wake-card').dataset.state = tone;
+    document.querySelector('.wake-card').classList.toggle('is-transmitting', busy);
     const flowStage = !scheduleReady ? -1 : state === 'pending' ? 1 : state === 'awake' || state === 'acknowledged' ? 2 : 0;
     document.querySelectorAll('[data-flow-step]').forEach((step, index) => {
       step.classList.toggle('is-active', index === flowStage);
@@ -93,11 +106,14 @@
       else step.removeAttribute('aria-current');
     });
     $('mainMessage').textContent = message;
-    $('timingText').textContent = !endpointReady ? '接続の準備が完了すると使えます。' : !key ? '設定用リンクから、初回登録をしてください。' : '毎時00分にPCが復帰 · 最長約1時間待ち';
+    $('timingText').textContent = !endpointReady ? 'サーバーの接続を準備中' : !key ? '初回のみ登録が必要です' : '毎時00分に確認 / 最大約1時間待ち';
     const nextCheck = current ? Date.parse(current.schedule.nextCheckAt) : NaN;
     $('scheduleInfo').hidden = !key || !endpointReady;
     $('scheduleInfo').textContent = Number.isFinite(nextCheck) ? '次回のPC復帰 ' + tokyoTime.format(new Date(nextCheck)) + '（日本時間）' : '次回のPC復帰時刻を確認中';
-    $('nextHeading').textContent = '起動予約はシアン色のボタンから';
+    if ($('syncTime')) {
+      $('syncTime').textContent = scheduleReady && Number.isFinite(nextCheck) ? tokyoTime.format(new Date(nextCheck)) : '— : —';
+    }
+    $('nextHeading').textContent = '起動のしくみ';
     $('nextMessage').textContent = 'タップすると起動要求を保存。PCは毎時00分に復帰して受信します。要求がなければ、Windowsの設定に従って再びスリープします。';
     $('lastSeen').hidden = !status || !Number.isFinite(status.lastSeen);
     if (!$('lastSeen').hidden) {
@@ -153,6 +169,17 @@
   });
 
   $('refreshButton').addEventListener('click', () => refresh(true));
+  if ($('systemButton')) {
+    const openSystem = () => $('systemDialog').showModal();
+    $('systemButton').addEventListener('click', openSystem);
+    $('systemTextButton').addEventListener('click', openSystem);
+    $('closeSystemButton').addEventListener('click', () => $('systemDialog').close());
+    $('systemDialog').addEventListener('click', event => {
+      if (event.target !== $('systemDialog')) return;
+      const bounds = event.target.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) $('systemDialog').close();
+    });
+  }
   function openPair() { if (!endpointReady) return; $('pairError').hidden = true; $('pairKey').value = ''; $('pairDialog').showModal(); }
   $('pairButton').addEventListener('click', openPair);
   $('changePairButton').addEventListener('click', openPair);
